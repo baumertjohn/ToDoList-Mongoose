@@ -12,8 +12,7 @@ app.use(express.static("public"));
 
 // Comment out to add mongodb backend.
 // const items = ["Buy Food", "Cook Food", "Eat Food"];
-// const workItems = [];
-const newListItems = [];
+const workItems = [];
 
 mongoose.set("strictQuery", true);
 mongoose.connect("mongodb://0.0.0.0:27017/todolistDB");
@@ -38,18 +37,14 @@ const Item = mongoose.model("Item", itemsSchema);
 app.get("/", function (req, res) {
   // const day = date.getDate();
 
-  // Create an array of list items from database.
+  // Find items in database and pass to home page.
   Item.find(function (err, items) {
     if (err) {
       console.log(err);
     } else {
-      items.forEach(function (item) {
-        newListItems.push(item.name);
-      });
+      res.render("list", { listTitle: "Today", newListItems: items });
     }
   });
-  res.render("list", { listTitle: "Today", newListItems: newListItems });
-  newListItems.length = 0;
 });
 
 app.post("/", function (req, res) {
