@@ -12,6 +12,7 @@ app.use(express.static("public"));
 
 // Comment out to add mongodb backend.
 // const items = ["Buy Food", "Cook Food", "Eat Food"];
+const initialTasks = [{ name: "Buy Food" }, { name: "Cook Food" }, { name: "Eat Food" }];
 const workItems = [];
 
 mongoose.set("strictQuery", true);
@@ -22,17 +23,6 @@ const itemsSchema = new mongoose.Schema({
 });
 
 const Item = mongoose.model("Item", itemsSchema);
-// Insert base items into the database.
-
-// let tasks = [{ name: "Buy Food" }, { name: "Cook Food" }, { name: "Eat Food" }];
-
-// Item.insertMany(tasks, function (error, docs) {
-//   if (error) {
-//     console.log(error);
-//   } else {
-//     console.log(docs);
-//   }
-// });
 
 app.get("/", function (req, res) {
   // const day = date.getDate();
@@ -42,7 +32,18 @@ app.get("/", function (req, res) {
     if (err) {
       console.log(err);
     } else {
-      res.render("list", { listTitle: "Today", newListItems: items });
+      if (items.length === 0) {
+        Item.insertMany(initialTasks, function (err) {
+          if (err) {
+            console.log(err);
+          } else {
+            console.log("Added items to database.");
+          }
+        });
+        res.redirect("/");
+      } else {
+        res.render("list", { listTitle: "Today", newListItems: items });
+      }
     }
   });
 });
