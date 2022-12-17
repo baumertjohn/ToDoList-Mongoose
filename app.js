@@ -54,16 +54,20 @@ app.get("/", function (req, res) {
 });
 
 app.post("/", function (req, res) {
-  const item = req.body.newItem;
+  const newItem = req.body.newItem;
+  const listName = req.body.list;
+  const item = new Item({ name: newItem });
 
-  Item.create({ name: item }, function (err) {
-    if (err) {
-      console.log(err);
-    } else {
-      console.log("New item added to list.");
-    }
-  });
-  res.redirect("/");
+  if (listName === "Today") {
+    item.save();
+    res.redirect("/");
+  } else {
+    List.findOne({ name: listName }, function (err, foundList) {
+      foundList.items.push(item);
+      foundList.save();
+      res.redirect("/" + listName);
+    });
+  }
 });
 
 // create dynamic route
