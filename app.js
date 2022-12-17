@@ -55,11 +55,11 @@ app.get("/", function (req, res) {
 
 app.post("/", function (req, res) {
   const newItem = req.body.newItem;
-  const listName = req.body.list;
+  const listName = req.body.listName;
   const item = new Item({ name: newItem });
 
   if (listName === "Today") {
-    item.save();
+    Item.create({ name: newItem }, function (err) {});
     res.redirect("/");
   } else {
     List.findOne({ name: listName }, function (err, foundList) {
@@ -72,7 +72,7 @@ app.post("/", function (req, res) {
 
 // create dynamic route
 app.get("/:listName", function (req, res) {
-  let listName = req.params.listName;
+  const listName = req.params.listName;
   List.findOne({ name: listName }, function (err, list) {
     if (err) {
       console.log(err);
@@ -100,14 +100,26 @@ app.get("/about", function (req, res) {
 
 app.post("/delete", function (req, res) {
   const checkedItemId = req.body.checkbox;
-  Item.findByIdAndRemove(checkedItemId, function (err) {
-    if (err) {
-      console.log(err);
-    } else {
-      console.log("Task Deleted");
-    }
-  });
-  res.redirect("/");
+  const listName = req.body.list;
+
+  if (listName === "Today") {
+    Item.findByIdAndRemove(checkedItemId, function (err) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log("Task Deleted");
+      }
+    });
+    res.redirect("/");
+  } else {
+    List.findOneAndUpdate({ name: listName }, { $pull: { items: { _id: checkedItemId } } }, function (err, foundList) {
+      if (err) {
+        console.log(err);
+      } else {
+        res.redirect("/" + listName);
+      }
+    });
+  }
 });
 
 app.listen(3000, function () {
