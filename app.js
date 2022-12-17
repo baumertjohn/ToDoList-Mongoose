@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const _ = require("lodash");
 // const date = require(__dirname + "/date.js");
 
 const app = express();
@@ -12,17 +13,21 @@ app.use(express.static("public"));
 
 // Comment out to add mongodb backend.
 // const items = ["Buy Food", "Cook Food", "Eat Food"];
-const initialTasks = [{ name: "Buy Food" }, { name: "Cook Food" }, { name: "Eat Food" }];
+const initialTasks = [
+  { name: "Welcome to your todolist!" },
+  { name: "Hit the + button to add a new item," },
+  { name: "<-- Hit this to delete an item." },
+];
 const workItems = [];
 
 mongoose.set("strictQuery", true);
 mongoose.connect("mongodb://0.0.0.0:27017/todolistDB");
 
-const itemsSchema = new mongoose.Schema({
-  name: String,
-});
-
+const itemsSchema = new mongoose.Schema({ name: String });
 const Item = mongoose.model("Item", itemsSchema);
+
+const listSchema = { name: String, items: [itemsSchema] };
+const List = mongoose.model("List", listSchema);
 
 app.get("/", function (req, res) {
   // const day = date.getDate();
@@ -51,25 +56,39 @@ app.get("/", function (req, res) {
 app.post("/", function (req, res) {
   const item = req.body.newItem;
 
-  if (req.body.list === "Work") {
-    workItems.push(item);
-    res.redirect("/work");
-  } else {
-    // items.push(item);
-    Item.create({ name: item }, function (err) {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log("New item added to list.");
-      }
-    });
-    res.redirect("/");
-  }
+  Item.create({ name: item }, function (err) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("New item added to list.");
+    }
+  });
+  res.redirect("/");
 });
 
-app.get("/work", function (req, res) {
-  res.render("list", { listTitle: "Work List", newListItems: workItems });
+// create dynamic route
+app.get("/:listName", function (req, res) {
+  let listName = req.params.listName;
+  List.findOne({ name: listName }, function (err, list) {
+    if (err) {
+      console.log(err);
+    } else {
+      if (list) {
+        // Show the existing list.
+        res.render("list", { listTitle: list.name, newListItems: list.items });
+      } else {
+        // Create a new list and show.
+        let list = new List({ name: listName, items: initialTasks });
+        list.save();
+        res.redirect("/" + listName);
+      }
+    }
+  });
 });
+
+// app.get("/work", function (req, res) {
+//   res.render("list", { listTitle: "Work List", newListItems: workItems });
+// });
 
 app.get("/about", function (req, res) {
   res.render("about");
