@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
@@ -19,7 +20,8 @@ const initialTasks = [
 ];
 
 mongoose.set("strictQuery", true);
-mongoose.connect("mongodb://0.0.0.0:27017/todolistDB");
+// mongoose.connect("mongodb://0.0.0.0:27017/todolistDB");
+mongoose.connect(process.env.MONGODB_ATLAS);
 
 const itemsSchema = new mongoose.Schema({ name: String });
 const Item = mongoose.model("Item", itemsSchema);
