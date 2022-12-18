@@ -11,14 +11,12 @@ app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-// Comment out to add mongodb backend.
-// const items = ["Buy Food", "Cook Food", "Eat Food"];
+// Initial tasks to populate when new list is created.
 const initialTasks = [
   { name: "Welcome to your todolist!" },
   { name: "Hit the + button to add a new item," },
   { name: "<-- Hit this to delete an item." },
 ];
-const workItems = [];
 
 mongoose.set("strictQuery", true);
 mongoose.connect("mongodb://0.0.0.0:27017/todolistDB");
@@ -29,23 +27,23 @@ const Item = mongoose.model("Item", itemsSchema);
 const listSchema = { name: String, items: [itemsSchema] };
 const List = mongoose.model("List", listSchema);
 
+// Display home page or custom list.
 app.get("/", function (req, res) {
   // const day = date.getDate();
-
   // Find items in database and pass to home page.
   Item.find(function (err, items) {
     if (err) {
       console.log(err);
     } else {
+      // Populate home list if it is empty.
       if (items.length === 0) {
         Item.insertMany(initialTasks, function (err) {
           if (err) {
             console.log(err);
           } else {
-            console.log("Added items to database.");
+            res.redirect("/");
           }
         });
-        res.redirect("/");
       } else {
         res.render("list", { listTitle: "Today", newListItems: items });
       }
@@ -53,26 +51,28 @@ app.get("/", function (req, res) {
   });
 });
 
+// Add items to Today list or custom list.
 app.post("/", function (req, res) {
   const newItem = req.body.newItem;
   const listName = req.body.listName;
-  const item = new Item({ name: newItem });
 
   if (listName === "Today") {
     Item.create({ name: newItem }, function (err) {});
     res.redirect("/");
   } else {
-    List.findOne({ name: listName }, function (err, foundList) {
-      foundList.items.push(item);
-      foundList.save();
-      res.redirect("/" + listName);
+    List.findOneAndUpdate({ name: listName }, { $push: { items: { name: newItem } } }, function (err, foundList) {
+      if (err) {
+        console.log(err);
+      } else {
+        res.redirect("/" + listName);
+      }
     });
   }
 });
 
-// create dynamic route
+// Create new list or display an existing custom list.
 app.get("/:listName", function (req, res) {
-  const listName = req.params.listName;
+  const listName = _.capitalize(req.params.listName);
   List.findOne({ name: listName }, function (err, list) {
     if (err) {
       console.log(err);
@@ -90,27 +90,19 @@ app.get("/:listName", function (req, res) {
   });
 });
 
-// app.get("/work", function (req, res) {
-//   res.render("list", { listTitle: "Work List", newListItems: workItems });
-// });
-
-app.get("/about", function (req, res) {
-  res.render("about");
-});
-
+// Delete items from Today list or custom list.
 app.post("/delete", function (req, res) {
   const checkedItemId = req.body.checkbox;
-  const listName = req.body.list;
+  const listName = req.body.listName;
 
   if (listName === "Today") {
     Item.findByIdAndRemove(checkedItemId, function (err) {
       if (err) {
         console.log(err);
       } else {
-        console.log("Task Deleted");
+        res.redirect("/");
       }
     });
-    res.redirect("/");
   } else {
     List.findOneAndUpdate({ name: listName }, { $pull: { items: { _id: checkedItemId } } }, function (err, foundList) {
       if (err) {
@@ -120,6 +112,10 @@ app.post("/delete", function (req, res) {
       }
     });
   }
+});
+
+app.get("/about", function (req, res) {
+  res.render("about");
 });
 
 app.listen(3000, function () {
